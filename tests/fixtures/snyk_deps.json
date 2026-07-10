@@ -1,0 +1,11 @@
+{
+  "vulnerabilities": [
+    {
+      "id": "SNYK-PYTHON-FLASK-1",
+      "title": "Denial of Service",
+      "severity": "high",
+      "packageName": "flask",
+      "identifiers": {"CWE": ["CWE-400"]}
+    }
+  ]
+}

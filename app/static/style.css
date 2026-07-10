@@ -1,0 +1,22 @@
+:root { --crit:#8b0000; --high:#c0392b; --med:#e08e0b; --low:#2e86c1; --info:#888; }
+body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; }
+header { background:#12233b; color:#fff; padding:12px 20px; display:flex;
+         justify-content:space-between; align-items:center; }
+header a { color:#9cc; text-decoration:none; }
+section { padding: 16px 20px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom:1px solid #ddd; padding:6px 8px; text-align:left; font-size:14px; }
+.badge { color:#fff; padding:1px 6px; border-radius:3px; font-size:12px; }
+.sev-critical{background:var(--crit)} .sev-high{background:var(--high)}
+.sev-medium{background:var(--med)} .sev-low{background:var(--low)} .sev-info{background:var(--info)}
+#summary-cards{display:flex;gap:10px;margin:10px 0}
+.card{border:1px solid #ddd;border-radius:6px;padding:10px 14px;min-width:80px}
+.chip{display:inline-block;padding:2px 8px;border-radius:10px;margin:2px;font-size:12px;background:#eee}
+.chip.done{background:#cfe9cf}.chip.failed{background:#f2c2c2}.chip.running{background:#fde9b0}
+.tab{border:none;background:#eee;padding:6px 12px;cursor:pointer}
+.tab.active{background:#12233b;color:#fff}
+button{cursor:pointer}
+.verdict-confirmed{color:var(--high);font-weight:bold}
+.verdict-false_positive{color:#888}
+.verdict-partially_true{color:var(--med)}
+.verdict-inconclusive{color:#555;font-style:italic}

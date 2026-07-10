@@ -1,0 +1,4 @@
+[
+  {"Name": "Python", "Lines": 120, "Code": 90, "Comment": 20, "Blank": 10, "Complexity": 15, "Count": 3},
+  {"Name": "JavaScript", "Lines": 60, "Code": 50, "Comment": 5, "Blank": 5, "Complexity": 8, "Count": 2}
+]

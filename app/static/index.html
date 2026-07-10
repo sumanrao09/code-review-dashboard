@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Secure Code Review Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header><h1>Secure Code Review Dashboard</h1>
+    <nav><a href="#" id="nav-home">Home</a> · <a href="#" id="nav-settings">Settings</a></nav>
+  </header>
+
+  <section id="new-scan">
+    <h2>New Scan</h2>
+    <input id="project-path" placeholder="/absolute/path/to/project" size="60">
+    <div id="tool-checks">
+      <label><input type="checkbox" value="semgrep" checked> Semgrep</label>
+      <label><input type="checkbox" value="sonarqube" checked> SonarQube</label>
+      <label><input type="checkbox" value="snyk" checked> Snyk</label>
+      <label><input type="checkbox" value="scc" checked> SCC</label>
+    </div>
+    <button id="run-scan">Scan</button>
+    <div id="warnings"></div>
+  </section>
+
+  <section id="history"><h2>History</h2><table id="history-table"></table></section>
+
+  <section id="results" hidden>
+    <h2>Results — scan <span id="result-id"></span></h2>
+    <div id="tool-chips"></div>
+    <div id="summary-cards"></div>
+    <div id="result-actions">
+      <button id="validate-btn">Validate with AI</button>
+      <span id="validate-progress"></span>
+      <button id="report-btn">Generate Report</button>
+    </div>
+    <div id="tabs">
+      <button data-tab="unified" class="tab active">Unified</button>
+      <button data-tab="semgrep" class="tab">Semgrep</button>
+      <button data-tab="sonarqube" class="tab">SonarQube</button>
+      <button data-tab="snyk" class="tab">Snyk</button>
+      <button data-tab="scc" class="tab">SCC / Metrics</button>
+    </div>
+    <div id="filters">
+      Severity <select id="f-sev"><option value="">all</option></select>
+      Tool <select id="f-tool"><option value="">all</option></select>
+    </div>
+    <div id="findings-panel"></div>
+  </section>
+
+  <section id="settings" hidden>
+    <h2>Settings</h2>
+    <label>Provider
+      <select id="s-provider"><option value="anthropic">Anthropic</option>
+        <option value="openai">OpenAI</option></select></label><br>
+    <label>Anthropic API key <input id="s-anthropic" type="password" placeholder="leave blank to keep"></label><br>
+    <label>OpenAI API key <input id="s-openai" type="password" placeholder="leave blank to keep"></label><br>
+    <button id="save-settings">Save</button>
+    <div id="settings-status"></div>
+  </section>
+
+  <div id="report-modal" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

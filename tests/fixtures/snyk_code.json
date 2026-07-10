@@ -1,0 +1,18 @@
+{
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "python/Sqli",
+          "level": "error",
+          "message": {"text": "SQL Injection via string concatenation."},
+          "locations": [
+            {"physicalLocation": {
+              "artifactLocation": {"uri": "app/db.py"},
+              "region": {"startLine": 42}}}
+          ]
+        }
+      ]
+    }
+  ]
+}

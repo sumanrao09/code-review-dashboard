@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NopalCyber — SCR Platform Security Assessment</title>
+<style>
+  :root{
+    --crit:#8b0000; --crit-bg:#fdecec;
+    --high:#c0392b; --high-bg:#fbeae8;
+    --med:#e08e0b;  --med-bg:#fef6e7;
+    --low:#2e86c1;  --low-bg:#eaf2fb;
+    --ink:#1c2833; --muted:#5d6d7e; --line:#d5dbdb; --brand:#0b3d5c;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:"Segoe UI",Arial,Helvetica,sans-serif;color:var(--ink);margin:0;background:#f4f6f7;line-height:1.5;}
+  .page{max-width:960px;margin:0 auto;background:#fff;padding:48px 56px;box-shadow:0 0 12px rgba(0,0,0,.08);}
+  header.report{border-bottom:4px solid var(--brand);padding-bottom:20px;margin-bottom:28px;}
+  header.report .brand{font-size:13px;letter-spacing:3px;color:var(--brand);font-weight:700;text-transform:uppercase;}
+  header.report h1{font-size:28px;margin:8px 0 4px;color:var(--brand);}
+  header.report .sub{color:var(--muted);font-size:14px;}
+  h2.section{font-size:20px;color:var(--brand);border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:40px;}
+  .meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 32px;font-size:14px;margin:16px 0;}
+  .meta-grid div{padding:4px 0;border-bottom:1px solid var(--line);}
+  .meta-grid b{color:var(--muted);font-weight:600;}
+  /* severity counts */
+  .counts{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0;}
+  .count{flex:1;min-width:120px;border-radius:8px;padding:14px;text-align:center;color:#fff;}
+  .count .n{font-size:30px;font-weight:800;line-height:1;}
+  .count .l{font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-top:6px;}
+  .c-crit{background:var(--crit);} .c-high{background:var(--high);}
+  .c-med{background:var(--med);} .c-low{background:var(--low);}
+  /* index table */
+  table.index{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+  table.index th,table.index td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top;}
+  table.index th{background:var(--brand);color:#fff;font-weight:600;}
+  table.index tr:nth-child(even){background:#f8f9f9;}
+  .badge{display:inline-block;padding:2px 9px;border-radius:11px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;}
+  .b-crit{background:var(--crit);} .b-high{background:var(--high);} .b-med{background:var(--med);} .b-low{background:var(--low);}
+  table.index a{color:var(--brand);text-decoration:none;font-weight:600;}
+  table.index a:hover{text-decoration:underline;}
+  /* finding card */
+  .finding{margin-top:38px;padding-top:8px;border-top:3px solid var(--line);page-break-inside:avoid;}
+  .finding h3{font-size:18px;margin:14px 0 10px;color:var(--ink);}
+  .finding h3 .num{color:var(--muted);font-weight:600;margin-right:8px;}
+  .stripe{height:6px;border-radius:3px;margin-bottom:4px;}
+  .s-crit{background:var(--crit);} .s-high{background:var(--high);} .s-med{background:var(--med);} .s-low{background:var(--low);}
+  table.summary{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0 18px;}
+  table.summary td{border:1px solid var(--line);padding:8px 11px;}
+  table.summary td.k{background:#f4f6f7;font-weight:600;color:var(--muted);width:26%;}
+  .field{margin:14px 0;}
+  .field .h{font-weight:700;color:var(--brand);font-size:14px;margin-bottom:4px;}
+  .field .b{font-size:14px;}
+  pre{background:#1c2833;color:#eaf2f8;border-radius:6px;padding:12px 14px;overflow-x:auto;font-size:12.5px;font-family:"Consolas","Courier New",monospace;line-height:1.45;}
+  .loc{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13.5px;}
+  .loc div{padding:5px 0;border-bottom:1px solid var(--line);}
+  .loc b{color:var(--muted);font-weight:600;}
+  code.inline{background:#eef2f3;border-radius:4px;padding:1px 5px;font-family:"Consolas",monospace;font-size:12.5px;color:#922b21;}
+  a.ref{color:var(--brand);word-break:break-all;font-size:13px;}
+  /* PoC / screenshot slot */
+  figure.poc{margin:8px 0 4px;border:2px dashed var(--line);border-radius:6px;background:#fafbfc;padding:0;overflow:hidden;page-break-inside:avoid;}
+  figure.poc .slot{min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--muted);padding:24px;gap:6px;}
+  figure.poc .slot .icon{font-size:26px;opacity:.55;}
+  figure.poc .slot .hint{font-size:12.5px;}
+  figure.poc .slot .hint code{background:#eef2f3;border-radius:4px;padding:1px 5px;font-family:"Consolas",monospace;font-size:11.5px;color:#922b21;}
+  figure.poc img{display:block;max-width:100%;height:auto;margin:0 auto;}
+  figure.poc figcaption{font-size:12.5px;color:var(--ink);background:#eef2f3;border-top:1px solid var(--line);padding:7px 11px;}
+  figure.poc figcaption b{color:var(--brand);}
+  footer.report{margin-top:48px;border-top:2px solid var(--line);padding-top:14px;font-size:12px;color:var(--muted);}
+  .toc-note{font-size:13px;color:var(--muted);margin-top:6px;}
+  @media print{
+    body{background:#fff;} .page{box-shadow:none;padding:0 8px;max-width:100%;}
+    .finding{page-break-inside:avoid;} pre{white-space:pre-wrap;}
+    a{color:var(--brand);}
+  }
+
+  .count.c-fp{background:#5d6d7e;}
+  .vtag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;color:#fff;white-space:nowrap;margin-right:6px;}
+  .v-confirmed{background:#1e8449;} .v-partial{background:#b9770e;} .v-fp{background:#7b7d7d;} .v-new{background:#2471a3;}
+  .vsum{margin:6px 0 20px;display:flex;gap:8px;flex-wrap:wrap;}
+  .verdict-note{font-size:13px;border-left:4px solid var(--line);padding:8px 12px;margin:8px 0;background:#f8f9f9;border-radius:0 6px 6px 0;}
+  .verdict-note.v-fp{border-left-color:#7b7d7d;background:#f4f6f7;}
+  .verdict-note.v-partial{border-left-color:#b9770e;background:#fef9ee;}
+  .verdict-note.v-new{border-left-color:#2471a3;background:#eef5fb;}
+  .verdict-note.v-confirmed{border-left-color:#1e8449;background:#eefaf1;}
+  .finding.fp{opacity:.72;}
+  .finding.fp .stripe{background:#7b7d7d !important;}
+  table.index tr.fp-row{opacity:.72;}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="report">
+    <div class="brand">NopalCyber &middot; Confidential</div>
+    <h1>SCR Platform — Application Security Assessment</h1>
+    <div class="sub">Source-code security review across 6 backend services and 3 frontend applications</div>
+  </header>
+
+  <div class="meta-grid">
+    <div><b>Client / Program</b><br>{{ meta.client }}</div>
+    <div><b>Assessment Type</b><br>{{ meta.assessment_type }}</div>
+    <div><b>Repositories in Scope</b><br>{{ meta.repos }}</div>
+    <div><b>Report Date</b><br>{{ meta.report_date }}</div>
+  </div>
+
+  <h2 class="section">1. Executive Summary</h2>
+  <p style="font-size:14px;">This assessment identified vulnerabilities across authentication, authorization, injection, cryptography, SSRF, and configuration domains. The dominant risk theme is <b>broken authentication and access control</b>: several services are exploitable by an unauthenticated caller, and the platform's shared HMAC request-signing scheme provides no real authenticity because its secret key ships inside the browser bundles. Findings below exclude confirmed false positives (e.g. MD5 cache keys, non-reachable dead code, sanitized markdown rendering) verified against the source.</p>
+
+  <div class="counts" id="counts"></div>
+  <div class="vsum" id="verdictSummary"></div>
+
+  <h2 class="section">2. Findings Index</h2>
+  <div class="toc-note">Ordered by severity. Click a title to jump to the detailed finding.</div>
+  <table class="index" id="indexTable">
+    <thead><tr><th style="width:32px;">#</th><th style="width:74px;">Severity</th><th style="width:120px;">Status</th><th style="width:80px;">CWE</th><th>Vulnerability</th><th style="width:120px;">Component</th></tr></thead>
+    <tbody></tbody>
+  </table>
+
+  <h2 class="section">3. Detailed Findings</h2>
+  <div id="findings"></div>
+
+  <footer class="report">
+    NopalCyber Confidential — This report contains sensitive security information and is intended solely for the named client. Line numbers reference the source at time of review. Findings should be re-validated after remediation.
+  </footer>
+</div>
+
+<script>
+const DATA = {{ data_json | safe }};
+
+const F = DATA.F, CWE = DATA.CWE, LOCS = DATA.LOCS, VERDICTS = DATA.VERDICTS;
+// HTML-escape finding-derived values before they enter any innerHTML sink.
+// Finding text comes from tools scanning untrusted code, so it must never be
+// treated as markup. Safe for both element-text and quoted-attribute contexts.
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+const rank = {Critical:0, High:1, Medium:2, Low:3};
+const cls  = {Critical:"crit", High:"high", Medium:"med", Low:"low"};
+
+// apply validation verdicts (existing findings keyed by title; new findings carry f.verdict)
+F.forEach(f=>{
+  const vd = VERDICTS[f.title];
+  if(vd){
+    f._verdict = vd.v; f._vnote = vd.note||''; f._vconf = vd.confidence||'';
+    if(vd.sevText) f._sevText = vd.sevText;
+    if(vd.bucket){ f._origRisk = f.risk; f.risk = vd.bucket; }
+    if(vd.v === 'FALSE POSITIVE') f._fp = true;
+  } else if(f.verdict){
+    f._verdict = f.verdict; f._vnote = f.verdictNote||''; f._new = true; f._vconf = f.confidence||'';
+  }
+});
+
+// FPs sort to the end, then by severity
+F.sort((a,b)=> (a._fp?1:0)-(b._fp?1:0) || rank[a.risk]-rank[b.risk]);
+
+const counts={Critical:0,High:0,Medium:0,Low:0};
+let fpCount=0, partialCount=0, confirmedCount=0, newCount=0;
+F.forEach(f=>{
+  if(f._fp){ fpCount++; return; }
+  counts[f.risk]=(counts[f.risk]||0)+1;
+  if(f._verdict==='PARTIALLY TRUE') partialCount++;
+  else if(f._new) newCount++;
+  else confirmedCount++;
+});
+
+const vClass = {'CONFIRMED':'v-confirmed','PARTIALLY TRUE':'v-partial','FALSE POSITIVE':'v-fp','CONFIRMED (New)':'v-new'};
+const vLabel = {'CONFIRMED':'✓ Confirmed','PARTIALLY TRUE':'◐ Partially True','FALSE POSITIVE':'✗ False Positive','CONFIRMED (New)':'＋ New (Confirmed)'};
+
+// severity count tiles
+const countsEl=document.getElementById("counts");
+["Critical","High","Medium","Low"].forEach(sev=>{
+  const d=document.createElement("div"); d.className="count c-"+cls[sev];
+  d.innerHTML=`<div class="n">${counts[sev]}</div><div class="l">${sev}</div>`;
+  countsEl.appendChild(d);
+});
+// verdict summary line
+const vsum=document.getElementById("verdictSummary");
+if(vsum){
+  vsum.innerHTML =
+    `<span class="vtag v-confirmed">${confirmedCount} Confirmed</span>`+
+    `<span class="vtag v-new">${newCount} New (Confirmed)</span>`+
+    `<span class="vtag v-partial">${partialCount} Partially True</span>`+
+    `<span class="vtag v-fp">${fpCount} False Positive</span>`;
+}
+
+const idxBody=document.querySelector("#indexTable tbody");
+const findingsEl=document.getElementById("findings");
+
+function field(h, node){
+  const w=document.createElement("div"); w.className="field";
+  const t=document.createElement("div"); t.className="h"; t.textContent=h; w.appendChild(t);
+  if(typeof node==="string"){ const b=document.createElement("div"); b.className="b"; b.textContent=node; w.appendChild(b); }
+  else w.appendChild(node);
+  return w;
+}
+
+F.forEach((f,i)=>{
+  const n=i+1;
+  const cweFull=(CWE[f.title]||f.cwe||"");
+  const cweId=cweFull.split(":")[0];
+  const cweNum=cweId.replace("CWE-","");
+  const vkey=f._verdict||'CONFIRMED';
+  const vcl=vClass[vkey]||'v-confirmed';
+  const vlb=vLabel[vkey]||vkey;
+
+  // index row
+  const tr=document.createElement("tr"); if(f._fp) tr.className="fp-row";
+  tr.innerHTML=`<td>${n}</td><td><span class="badge b-${cls[f.risk]}">${esc(f._sevText||f.risk)}</span></td>`+
+    `<td><span class="vtag ${vcl}">${vlb}</span></td>`+
+    `<td>${cweId?`<a href="https://cwe.mitre.org/data/definitions/${esc(cweNum)}.html" target="_blank" rel="noopener">${esc(cweId)}</a>`:'&mdash;'}</td>`+
+    `<td><a href="#f${n}">${esc(f.title)}</a></td><td>${esc(f.component)}</td>`;
+  idxBody.appendChild(tr);
+
+  // finding card
+  const card=document.createElement("div"); card.className="finding"+(f._fp?" fp":""); card.id="f"+n;
+  const stripe=document.createElement("div"); stripe.className="stripe s-"+cls[f.risk]; card.appendChild(stripe);
+  const h=document.createElement("h3");
+  h.innerHTML=`<span class="num">#${n}</span>`;
+  const tSpan=document.createElement("span"); tSpan.textContent=f.title; if(f._fp) tSpan.style.textDecoration="line-through"; h.appendChild(tSpan);
+  const vb=document.createElement("span"); vb.className="vtag "+vcl; vb.style.marginLeft="10px"; vb.textContent=vlb; h.appendChild(vb);
+  card.appendChild(h);
+
+  // validation callout
+  if(f._vnote){
+    const call=document.createElement("div"); call.className="verdict-note "+vcl;
+    const lab=document.createElement("b"); lab.textContent=vlb+(f._vconf?` (${f._vconf} confidence)`:'')+": ";
+    call.appendChild(lab); call.appendChild(document.createTextNode(f._vnote));
+    card.appendChild(call);
+  }
+
+  const st=document.createElement("table"); st.className="summary";
+  st.innerHTML=
+    `<tr><td class="k">Overall Risk</td><td><span class="badge b-${cls[f.risk]}">${esc(f._sevText||f.risk)}</span></td>`+
+    `<td class="k">Category</td><td>${esc(f.category)}</td></tr>`+
+    `<tr><td class="k">Component</td><td>${esc(f.component)}</td>`+
+    `<td class="k">Exploitability</td><td>${esc(f.exploitability)||'—'}</td></tr>`+
+    `<tr><td class="k">Impact</td><td>${esc(f.impact)||'—'}</td>`+
+    `<td class="k">Validation</td><td><span class="vtag ${vcl}">${vlb}</span></td></tr>`+
+    `<tr><td class="k">CWE</td><td colspan="3">${cweFull?esc(cweFull):'&mdash;'}</td></tr>`;
+  card.appendChild(st);
+
+  card.appendChild(field("Vulnerability Description", f.description||''));
+
+  const obsWrap=document.createElement("div");
+  const obs=document.createElement("div"); obs.className="b"; obs.textContent=f.observation||''; obsWrap.appendChild(obs);
+  if(f.code){ const pre=document.createElement("pre"); pre.textContent=f.code; obsWrap.appendChild(pre); }
+  card.appendChild(field("Vulnerability Observation", obsWrap));
+
+  // PoC slot
+  const fig=document.createElement("figure"); fig.className="poc";
+  const imgSrc = f.image || `screenshots/figure-${n}.png`;
+  const img=document.createElement("img"); img.alt=`PoC screenshot for ${esc(f.title)}`; img.src=imgSrc;
+  img.onerror=function(){
+    img.remove();
+    const slot=document.createElement("div"); slot.className="slot";
+    slot.innerHTML=`<div class="icon">&#128247;</div><div class="hint"><b>Screenshot / PoC placeholder</b></div>`+
+      `<div class="hint">Drop the evidence image at <code>${esc(imgSrc)}</code> (next to this report) to display it here.</div>`;
+    fig.insertBefore(slot, fig.firstChild);
+  };
+  fig.appendChild(img);
+  const cap=document.createElement("figcaption"); cap.innerHTML=`<b>Figure ${n}.</b> Proof of Concept &mdash; ${esc(f.title)}`; fig.appendChild(cap);
+  card.appendChild(field("Proof of Concept (Screenshot)", fig));
+
+  card.appendChild(field("Vulnerability Impact", f.impactText||''));
+
+  const locList = LOCS[f.title] || null;
+  if(locList){
+    const wrap=document.createElement("div");
+    const p=document.createElement("div"); p.className="b"; p.style.marginBottom="6px";
+    p.innerHTML=`Identified in <b>${locList.length}</b> locations &mdash; parameter: <code class="inline">${esc(f.parameter)||'—'}</code>`;
+    wrap.appendChild(p);
+    const lt=document.createElement("table"); lt.className="index";
+    lt.innerHTML=`<thead><tr><th style="width:34px;">#</th><th>File</th><th style="width:60px;">Line</th><th>Sink / Detail</th></tr></thead>`;
+    const tb=document.createElement("tbody");
+    locList.forEach((L,li)=>{
+      const r=document.createElement("tr");
+      const c1=document.createElement("td"); c1.textContent=li+1;
+      const c2=document.createElement("td"); c2.textContent=L.f;
+      const c3=document.createElement("td"); c3.textContent=L.l;
+      const c4=document.createElement("td"); const code=document.createElement("code"); code.className="inline"; code.textContent=L.n; c4.appendChild(code);
+      r.append(c1,c2,c3,c4); tb.appendChild(r);
+    });
+    lt.appendChild(tb); wrap.appendChild(lt);
+    card.appendChild(field("Vulnerability Locations (Multiple)", wrap));
+  } else {
+    const loc=document.createElement("div"); loc.className="loc";
+    loc.innerHTML=`<div><b>Location</b><br>${esc(f.location)||'—'}</div><div><b>Line Number</b><br>${esc(f.line)||'—'}</div>`+
+      `<div><b>Parameter</b><br>${esc(f.parameter)||'—'}</div><div><b>Component</b><br>${esc(f.component)}</div>`;
+    card.appendChild(field("Vulnerability Location", loc));
+  }
+
+  card.appendChild(field("Recommendation", f.recommendation||''));
+
+  const ref=document.createElement("a"); ref.className="ref"; ref.href=(/^https?:\/\//i.test(f.ref||'')?f.ref:(cweNum?`https://cwe.mitre.org/data/definitions/${cweNum}.html`:'#')); ref.textContent=ref.href;
+  card.appendChild(field("Reference", ref));
+
+  findingsEl.appendChild(card);
+});
+
+</script>
+</body>
+</html>

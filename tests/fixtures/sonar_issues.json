@@ -1,0 +1,19 @@
+{
+  "issues": [
+    {
+      "rule": "python:S2076",
+      "severity": "BLOCKER",
+      "component": "proj:app/os_cmd.py",
+      "line": 8,
+      "message": "OS command injection.",
+      "cwe": ["CWE-78"]
+    },
+    {
+      "rule": "python:S1481",
+      "severity": "MINOR",
+      "component": "proj:app/util.py",
+      "line": 20,
+      "message": "Unused local variable."
+    }
+  ]
+}
