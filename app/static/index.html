@@ -1,65 +1,251 @@
 <!doctype html>
-<html>
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Secure Code Review Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
-  <header><h1>Secure Code Review Dashboard</h1>
-    <nav><a href="#" id="nav-home">Home</a> · <a href="#" id="nav-settings">Settings</a></nav>
+  <!-- ───────────────────────── Top bar ───────────────────────── -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <path d="m9 12 2 2 4-4"></path>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <strong>Secure Code Review</strong>
+        <span class="brand-sub">multi-tool findings dashboard</span>
+      </div>
+    </div>
+    <nav class="topbar-actions">
+      <button id="nav-settings" class="btn btn-ghost" type="button" title="Settings">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.2.61.76 1.05 1.42 1.09H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+      <button id="theme-toggle" class="btn btn-icon" type="button" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </nav>
   </header>
 
-  <section id="new-scan">
-    <h2>New Scan</h2>
-    <input id="project-path" placeholder="/absolute/path/to/project" size="60">
-    <div id="tool-checks">
-      <label><input type="checkbox" value="semgrep" checked> Semgrep</label>
-      <label><input type="checkbox" value="sonarqube" checked> SonarQube</label>
-      <label><input type="checkbox" value="snyk" checked> Snyk</label>
-      <label><input type="checkbox" value="scc" checked> SCC</label>
-    </div>
-    <button id="run-scan">Scan</button>
-    <div id="warnings"></div>
-  </section>
+  <main class="container">
+    <!-- ───────────────────────── New scan ───────────────────────── -->
+    <section id="new-scan" class="card">
+      <div class="card-head">
+        <h2 class="card-title">New scan</h2>
+        <p class="card-desc">
+          <span class="step-badge">Step 1</span>
+          Profile the codebase with SCC — the recommended scanners are chosen from what it finds.
+        </p>
+      </div>
+      <div class="scan-form">
+        <div class="field field-grow">
+          <label class="field-label" for="project-path">Project path</label>
+          <div class="input-group">
+            <input id="project-path" class="input input-mono"
+                   placeholder="/absolute/path/to/project" autocomplete="off" spellcheck="false">
+            <button id="browse-btn" class="btn btn-secondary" type="button"
+                    title="Pick the repo folder with the native file explorer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-7l-2-2H5a2 2 0 0 0-2 2z"></path>
+              </svg>
+              <span>Browse…</span>
+            </button>
+          </div>
+        </div>
+        <button id="analyze-btn" class="btn btn-primary btn-lg" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z"></path><path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <span>Analyze</span>
+        </button>
+      </div>
+      <div id="warnings" class="warnings"></div>
 
-  <section id="history"><h2>History</h2><table id="history-table"></table></section>
+      <!-- Step 2: insights + recommendation matrix (revealed after Analyze) -->
+      <div id="analysis" class="analysis" hidden>
+        <div class="analysis-section">
+          <div class="analysis-head">
+            <h3 class="subhead">Codebase insights</h3>
+            <span id="size-badge" class="size-badge"></span>
+          </div>
+          <div id="insight-tiles" class="stat-grid"></div>
+          <div id="lang-breakdown" class="lang-breakdown"></div>
+          <div id="manifests" class="manifests"></div>
+        </div>
 
-  <section id="results" hidden>
-    <h2>Results — scan <span id="result-id"></span></h2>
-    <div id="tool-chips"></div>
-    <div id="summary-cards"></div>
-    <div id="result-actions">
-      <button id="validate-btn">Validate with AI</button>
-      <span id="validate-progress"></span>
-      <button id="report-btn">Generate Report</button>
-    </div>
-    <div id="tabs">
-      <button data-tab="unified" class="tab active">Unified</button>
-      <button data-tab="semgrep" class="tab">Semgrep</button>
-      <button data-tab="sonarqube" class="tab">SonarQube</button>
-      <button data-tab="snyk" class="tab">Snyk</button>
-      <button data-tab="scc" class="tab">SCC / Metrics</button>
-    </div>
-    <div id="filters">
-      Severity <select id="f-sev"><option value="">all</option></select>
-      Tool <select id="f-tool"><option value="">all</option></select>
-    </div>
-    <div id="findings-panel"></div>
-  </section>
+        <div class="analysis-section">
+          <div class="analysis-head">
+            <h3 class="subhead"><span class="step-badge">Step 2</span> Recommended configuration</h3>
+          </div>
+          <p class="card-desc matrix-desc">
+            Ticked tools are recommended for this codebase by the decision matrix. Adjust as needed, then run.
+          </p>
+          <div id="tool-checks" class="tool-matrix"></div>
+          <div class="run-row">
+            <button id="run-scan" class="btn btn-primary btn-lg" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Run scan</span>
+            </button>
+            <span id="run-note" class="inline-note"></span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <section id="settings" hidden>
-    <h2>Settings</h2>
-    <label>Provider
-      <select id="s-provider"><option value="anthropic">Anthropic</option>
-        <option value="openai">OpenAI</option></select></label><br>
-    <label>Anthropic API key <input id="s-anthropic" type="password" placeholder="leave blank to keep"></label><br>
-    <label>OpenAI API key <input id="s-openai" type="password" placeholder="leave blank to keep"></label><br>
-    <button id="save-settings">Save</button>
-    <div id="settings-status"></div>
-  </section>
+    <!-- ───────────────────────── Results ───────────────────────── -->
+    <section id="results" class="card" hidden>
+      <div class="result-head">
+        <div class="result-head-main">
+          <h2 class="card-title">
+            Scan <span class="scan-tag">#<span id="result-id"></span></span>
+          </h2>
+          <div id="result-meta" class="result-meta"></div>
+        </div>
+        <span id="result-status" class="status-pill"></span>
+      </div>
 
-  <div id="report-modal" hidden></div>
-  <script src="/static/app.js"></script>
+      <div id="tool-chips" class="status-chips"></div>
+
+      <div id="summary-cards" class="stat-grid"></div>
+
+      <div class="result-actions">
+        <button id="validate-btn" class="btn btn-primary" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2 4 5v6c0 5 3.4 7.4 8 9 4.6-1.6 8-4 8-9V5z"></path>
+            <path d="m9 12 2 2 4-4"></path>
+          </svg>
+          <span>Validate all with AI</span>
+        </button>
+        <span id="validate-progress" class="inline-note"></span>
+      </div>
+
+      <div class="findings-toolbar">
+        <div id="tabs" class="tabs">
+          <button data-tab="unified" class="tab active" type="button">Unified</button>
+          <button data-tab="semgrep" class="tab" type="button">Semgrep</button>
+          <button data-tab="sonarqube" class="tab" type="button">SonarQube</button>
+          <button data-tab="snyk" class="tab" type="button">Snyk</button>
+          <button data-tab="scc" class="tab" type="button">SCC / Metrics</button>
+        </div>
+        <div id="filters" class="filters">
+          <label class="select-wrap">
+            <span>Severity</span>
+            <select id="f-sev"><option value="">All</option></select>
+          </label>
+          <label class="select-wrap">
+            <span>Tool</span>
+            <select id="f-tool"><option value="">All</option></select>
+          </label>
+        </div>
+      </div>
+
+      <div id="findings-panel" class="findings-panel"></div>
+    </section>
+
+    <!-- ───────────────────────── History ───────────────────────── -->
+    <section id="history" class="card">
+      <div class="card-head">
+        <h2 class="card-title">Scan history</h2>
+        <p class="card-desc">Every scan is saved locally. Click a row to open it.</p>
+      </div>
+      <div id="history-body" class="history-body"></div>
+    </section>
+  </main>
+
+  <!-- ───────────────────────── Settings modal ───────────────────────── -->
+  <div id="settings-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-head">
+        <h3 id="settings-title">AI validation settings</h3>
+        <button class="btn btn-icon modal-close" data-close="settings-modal" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-hint">Keys and tokens are stored only in the local database and never returned in cleartext.
+          Ollama runs locally and needs no key.</p>
+        <div class="settings-section">AI validation</div>
+        <div class="field">
+          <label class="field-label" for="s-provider">Active provider</label>
+          <select id="s-provider" class="input">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="gemini">Google (Gemini)</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="grok">xAI (Grok)</option>
+            <option value="ollama">Ollama (local)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-anthropic">Anthropic API key</label>
+          <input id="s-anthropic" class="input input-mono" type="password" placeholder="Leave blank to keep current">
+          <span id="s-anthropic-state" class="key-state"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-openai">OpenAI API key</label>
+          <input id="s-openai" class="input input-mono" type="password" placeholder="Leave blank to keep current">
+          <span id="s-openai-state" class="key-state"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-gemini">Google Gemini API key</label>
+          <input id="s-gemini" class="input input-mono" type="password" placeholder="Leave blank to keep current">
+          <span id="s-gemini-state" class="key-state"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-deepseek">DeepSeek API key</label>
+          <input id="s-deepseek" class="input input-mono" type="password" placeholder="Leave blank to keep current">
+          <span id="s-deepseek-state" class="key-state"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-grok">xAI (Grok) API key</label>
+          <input id="s-grok" class="input input-mono" type="password" placeholder="Leave blank to keep current">
+          <span id="s-grok-state" class="key-state"></span>
+        </div>
+        <div class="settings-section">Scanner tokens</div>
+        <div class="field">
+          <label class="field-label" for="s-sonar">SonarQube token</label>
+          <input id="s-sonar" class="input input-mono" type="password"
+                 placeholder="Auto-provisioned on first scan if the server has default credentials">
+          <span id="s-sonar-state" class="key-state"></span>
+        </div>
+        <div class="field">
+          <label class="field-label" for="s-snyk">Snyk token</label>
+          <input id="s-snyk" class="input input-mono" type="password"
+                 placeholder="From your Snyk account settings — enables snyk code test + snyk test">
+          <span id="s-snyk-state" class="key-state"></span>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" data-close="settings-modal" type="button">Cancel</button>
+        <button id="save-settings" class="btn btn-primary" type="button">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js?v=2"></script>
 </body>
 </html>

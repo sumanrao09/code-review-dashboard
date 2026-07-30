@@ -1,7 +1,9 @@
 import json
+import os
 import subprocess
 from pathlib import Path
 
+from app import token_store
 from app.models import Finding, normalize_severity
 
 NAME = "snyk"
@@ -13,8 +15,18 @@ _MANIFESTS = ["package.json", "requirements.txt", "pom.xml", "build.gradle",
               "go.mod", "Gemfile"]
 
 
+def _env() -> dict:
+    """Subprocess env with the Snyk token injected (Settings or SNYK_TOKEN)."""
+    env = os.environ.copy()
+    tok = token_store.resolve("SNYK_TOKEN", "snyk_token")
+    if tok:
+        env["SNYK_TOKEN"] = tok
+    return env
+
+
 def _json_cmd(args, cwd) -> dict:
-    proc = subprocess.run(args, capture_output=True, text=True, cwd=cwd)
+    proc = subprocess.run(args, capture_output=True, text=True,
+                          encoding="utf-8", cwd=cwd, env=_env())
     try:
         return json.loads(proc.stdout or "{}")
     except json.JSONDecodeError:
@@ -28,7 +40,7 @@ def run(project_path: str, workdir: Path) -> Path:
     deps = {}
     if any((Path(project_path) / m).exists() for m in _MANIFESTS):
         deps = _json_cmd([BINARY, "test", "--json"], project_path)
-    out.write_text(json.dumps({"code": code, "deps": deps}))
+    out.write_text(json.dumps({"code": code, "deps": deps}), encoding="utf-8")
     return out
 
 
@@ -69,5 +81,5 @@ def _parse_deps(deps: dict) -> list:
 
 
 def parse(raw_path: Path) -> list:
-    data = json.loads(Path(raw_path).read_text() or "{}")
+    data = json.loads(Path(raw_path).read_text(encoding="utf-8") or "{}")
     return _parse_code(data.get("code", {})) + _parse_deps(data.get("deps", {}))

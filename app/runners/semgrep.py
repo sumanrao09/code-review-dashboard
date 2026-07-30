@@ -7,14 +7,22 @@ from app.models import Finding, normalize_severity
 NAME = "semgrep"
 BINARY = "semgrep"
 
+# Security rules only — no correctness/style noise ("auto" mixes those in).
+CONFIGS = ["p/security-audit", "p/secrets"]
+
 
 def run(project_path: str, workdir: Path) -> Path:
     out = workdir / "semgrep.json"
+    cmd = [BINARY, "scan"]
+    for c in CONFIGS:
+        cmd += ["--config", c]
+    # A security review must cover uncommitted files too — without this,
+    # semgrep silently limits the scan to git-tracked files.
+    cmd += ["--no-git-ignore", "--json", project_path]
     proc = subprocess.run(
-        [BINARY, "scan", "--config", "auto", "--json", project_path],
-        capture_output=True, text=True,
+        cmd, capture_output=True, text=True, encoding="utf-8",
     )
-    out.write_text(proc.stdout or "{}")
+    out.write_text(proc.stdout or "{}", encoding="utf-8")
     return out
 
 
@@ -27,7 +35,7 @@ def _cwe_id(metadata: dict) -> str | None:
 
 
 def parse(raw_path: Path) -> list:
-    data = json.loads(Path(raw_path).read_text() or "{}")
+    data = json.loads(Path(raw_path).read_text(encoding="utf-8") or "{}")
     findings = []
     for r in data.get("results", []):
         extra = r.get("extra", {})

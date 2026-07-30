@@ -130,6 +130,12 @@ def _row_to_finding(row) -> Finding:
     )
 
 
+def get_finding(conn, finding_id: int):
+    row = conn.execute("SELECT * FROM findings WHERE id=?",
+                       (finding_id,)).fetchone()
+    return _row_to_finding(row) if row else None
+
+
 def get_findings(conn, scan_id: int) -> list:
     rows = conn.execute("SELECT * FROM findings WHERE scan_id=? ORDER BY id",
                         (scan_id,)).fetchall()

@@ -66,7 +66,7 @@ def build_data(findings: list, meta: dict, include_false_positives: bool) -> dic
 
 def render_report(data: dict, meta: dict) -> str:
     env = Environment(autoescape=select_autoescape(["html"]))
-    template_src = Path(TEMPLATE_PATH).read_text()
+    template_src = Path(TEMPLATE_PATH).read_text(encoding="utf-8")
     template = env.from_string(template_src)
     # Serialize data as a script-safe JSON string (break </script> sequences)
     data_json = json.dumps(data).replace("</", "<\\/")
@@ -82,6 +82,6 @@ def generate(conn, scan_id: int, meta: dict,
     workdir.mkdir(parents=True, exist_ok=True)
     n = len(db.list_reports(conn, scan_id)) + 1
     out = workdir / f"report-{n}.html"
-    out.write_text(html)
+    out.write_text(html, encoding="utf-8")
     db.create_report(conn, scan_id, str(out), json.dumps(meta))
     return str(out)

@@ -19,3 +19,22 @@ def test_registry_contains_semgrep():
     from app.runners.base import RUNNERS
     assert "semgrep" in RUNNERS
     assert RUNNERS["semgrep"].NAME == "semgrep"
+
+
+def test_run_uses_security_rulesets_only(tmp_path, monkeypatch):
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured["cmd"] = cmd
+
+        class P:
+            stdout = "{}"
+        return P()
+
+    monkeypatch.setattr(semgrep.subprocess, "run", fake_run)
+    semgrep.run(str(tmp_path), tmp_path)
+    joined = " ".join(captured["cmd"])
+    assert "p/security-audit" in joined
+    assert "p/secrets" in joined
+    assert "auto" not in captured["cmd"]  # no correctness/style rules
+    assert "--no-git-ignore" in captured["cmd"]  # scan uncommitted files too

@@ -1,4 +1,5 @@
 import json
+import os
 import threading
 from dataclasses import asdict
 from pathlib import Path
@@ -8,7 +9,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app import db, scanner, settings as settings_mod
+from app import db, folderpick, profiler, scanner, settings as settings_mod
+from app.runners import sonar_auth
 from app.config import DB_PATH, ensure_dirs
 from app.report import generator as report_generator
 from app.validator import service as validate_service
@@ -24,6 +26,10 @@ def index() -> FileResponse:
     return FileResponse(_STATIC / "index.html")
 
 
+class AnalyzeRequest(BaseModel):
+    project_path: str
+
+
 class ScanRequest(BaseModel):
     project_path: str
     tools: list[str]
@@ -33,6 +39,11 @@ class SettingsRequest(BaseModel):
     provider: str = ""
     anthropic_key: str = ""
     openai_key: str = ""
+    gemini_key: str = ""
+    deepseek_key: str = ""
+    grok_key: str = ""
+    sonar_token: str = ""
+    snyk_token: str = ""
 
 
 def get_conn():
@@ -65,10 +76,35 @@ def _run_scan_thread(scan_id: int, project_path: str, tools: list):
         conn.close()
 
 
+@app.post("/api/analyze")
+def analyze(req: AnalyzeRequest) -> dict:
+    """Step 1: profile the codebase with SCC and recommend a scan config."""
+    return profiler.analyze(req.project_path)
+
+
+@app.post("/api/pick-folder")
+def pick_folder_endpoint() -> dict:
+    """Open a native folder picker on this machine (local single-user app)."""
+    if os.environ.get("RUNNING_IN_DOCKER"):
+        raise HTTPException(
+            501, "Folder picker isn't available in Docker — type a path under "
+                 "/projects (your repos mounted via SCAN_ROOT).")
+    try:
+        path = folderpick.pick_folder()
+    except folderpick.PickerBusyError as exc:
+        raise HTTPException(409, str(exc))
+    except Exception as exc:
+        raise HTTPException(500, f"Folder picker unavailable: {exc}")
+    return {"path": path}
+
+
 @app.post("/api/scans")
 def create_scan(req: ScanRequest) -> dict:
     warnings = scanner.preflight(req.project_path, req.tools)
     conn = get_conn()
+    if "sonarqube" in req.tools:
+        # Auto-provision a token from a default-credential server if needed.
+        warnings += sonar_auth.ensure_token(conn)
     scan_id = db.create_scan(conn, req.project_path, req.tools)
     conn.close()
     threading.Thread(target=_run_scan_thread,
@@ -108,19 +144,31 @@ def get_scan(scan_id: int) -> dict:
 def get_settings() -> dict:
     conn = get_conn()
     cfg = settings_mod.get_provider_config(conn)
+    sonar = sonar_auth.stored_token(conn)
+    snyk_tok = db.get_setting(conn, "snyk_token")
     conn.close()
-    return {
-        "provider": cfg["provider"],
-        "anthropic_key": "set" if cfg["anthropic_key"] else "unset",
-        "openai_key": "set" if cfg["openai_key"] else "unset",
-    }
+    out = {"provider": cfg["provider"]}
+    for p in settings_mod.KEYED_PROVIDERS:
+        out[f"{p}_key"] = "set" if cfg.get(f"{p}_key") else "unset"
+    out["sonar_token"] = "set" if sonar else "unset"
+    out["snyk_token"] = "set" if snyk_tok else "unset"
+    return out
 
 
 @app.post("/api/settings")
 def save_settings(req: SettingsRequest) -> dict:
     conn = get_conn()
-    settings_mod.save_provider_config(conn, req.provider, req.anthropic_key,
-                                      req.openai_key)
+    settings_mod.save_provider_config(conn, req.provider, {
+        "anthropic": req.anthropic_key,
+        "openai": req.openai_key,
+        "gemini": req.gemini_key,
+        "deepseek": req.deepseek_key,
+        "grok": req.grok_key,
+    })
+    if req.sonar_token:
+        sonar_auth.store_token(conn, req.sonar_token)
+    if req.snyk_token:
+        db.set_setting(conn, "snyk_token", req.snyk_token)
     conn.close()
     return {"ok": True}
 
@@ -160,6 +208,19 @@ def get_report(report_id: int):
     return FileResponse(row["path"], media_type="text/html")
 
 
+def _resolve_provider(cfg) -> tuple:
+    """Return (provider_fn, api_key) for the configured provider or raise 400."""
+    provider = cfg.get("provider")
+    if not provider or provider not in validate_service.PROVIDERS:
+        raise HTTPException(400, "No AI provider configured in Settings.")
+    if provider in settings_mod.KEYLESS_PROVIDERS:
+        return validate_service.PROVIDERS[provider], ""
+    key = cfg.get(f"{provider}_key")
+    if not key:
+        raise HTTPException(400, f"No API key stored for '{provider}' in Settings.")
+    return validate_service.PROVIDERS[provider], key
+
+
 @app.post("/api/scans/{scan_id}/validate")
 def validate_scan_endpoint(scan_id: int) -> dict:
     conn = get_conn()
@@ -167,14 +228,33 @@ def validate_scan_endpoint(scan_id: int) -> dict:
     if scan is None:
         conn.close()
         raise HTTPException(404, "scan not found")
-    cfg = settings_mod.get_provider_config(conn)
-    provider = cfg["provider"]
-    key = cfg.get(f"{provider}_key") if provider else None
-    if not provider or not key:
+    try:
+        provider_fn, key = _resolve_provider(settings_mod.get_provider_config(conn))
+    except HTTPException:
         conn.close()
-        raise HTTPException(400, "No AI provider/key configured in Settings.")
-    provider_fn = validate_service.PROVIDERS[provider]
+        raise
     summary = validate_service.validate_scan(
         conn, scan_id, scan["project_path"], provider_fn, key)
     conn.close()
     return summary
+
+
+@app.post("/api/findings/{finding_id}/validate")
+def validate_finding_endpoint(finding_id: int) -> dict:
+    """Validate a single finding with the configured AI provider."""
+    conn = get_conn()
+    finding = db.get_finding(conn, finding_id)
+    if finding is None:
+        conn.close()
+        raise HTTPException(404, "finding not found")
+    scan = db.get_scan(conn, finding.scan_id)
+    try:
+        provider_fn, key = _resolve_provider(settings_mod.get_provider_config(conn))
+    except HTTPException:
+        conn.close()
+        raise
+    validate_service.validate_finding(conn, finding, scan["project_path"],
+                                      provider_fn, key)
+    updated = db.get_finding(conn, finding_id)
+    conn.close()
+    return asdict(updated)

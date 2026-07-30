@@ -12,9 +12,9 @@ def run(project_path: str, workdir: Path) -> Path:
     out = workdir / "scc.json"
     proc = subprocess.run(
         [BINARY, "--format", "json", project_path],
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8",
     )
-    out.write_text(proc.stdout or "[]")
+    out.write_text(proc.stdout or "[]", encoding="utf-8")
     return out
 
 
@@ -27,7 +27,7 @@ def _cocomo_months(total_code: int) -> float:
 
 
 def parse_metrics(raw_path: Path) -> Metrics:
-    langs = json.loads(Path(raw_path).read_text() or "[]")
+    langs = json.loads(Path(raw_path).read_text(encoding="utf-8") or "[]")
     total_code = sum(l.get("Code", 0) for l in langs)
     return Metrics(
         total_lines=sum(l.get("Lines", 0) for l in langs),

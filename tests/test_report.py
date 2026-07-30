@@ -128,7 +128,7 @@ def test_report_template_escapes_all_finding_innerhtml_sinks():
     which pytest cannot execute — this locks the source-level invariant.)
     """
     from pathlib import Path
-    tpl = Path("app/report/template.html").read_text()
+    tpl = Path("app/report/template.html").read_text(encoding="utf-8")
 
     assert "function esc(" in tpl, "esc() HTML-escape helper missing from template"
 

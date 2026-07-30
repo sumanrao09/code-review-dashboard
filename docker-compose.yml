@@ -1,13 +1,33 @@
 services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"        # local-only, matching the app's security posture
+    environment:
+      - SONAR_URL=http://sonarqube:9000
+      # Leave SONAR_TOKEN unset to let the app auto-provision one from the
+      # bundled server (fresh installs keep the admin/admin default).
+      - SONAR_TOKEN=${SONAR_TOKEN:-}
+      - SNYK_TOKEN=${SNYK_TOKEN:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434/v1}
+    volumes:
+      - ./data:/app/data             # scans/findings/settings persist on the host
+      - ${SCAN_ROOT:-./}:/projects:ro  # your repos, visible in the UI at /projects/<name>
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # lets the container reach a host Ollama on Linux
+    depends_on:
+      - sonarqube
+
   sonarqube:
     image: sonarqube:community
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
       - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true
     volumes:
       - sonarqube_data:/opt/sonarqube/data
       - sonarqube_extensions:/opt/sonarqube/extensions
+
 volumes:
   sonarqube_data:
   sonarqube_extensions:

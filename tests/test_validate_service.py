@@ -32,6 +32,21 @@ def test_validate_scan_writes_verdicts(tmp_path):
     assert findings[0].cwe == "CWE-89"
 
 
+def test_validate_finding_updates_only_that_finding(tmp_path):
+    conn, sid = _seed(tmp_path)
+    target = db.get_findings(conn, sid)[0]
+
+    def fake_provider(prompt, api_key):
+        return Verdict("false_positive", "medium", "n", "i", "r", None)
+
+    v = service.validate_finding(conn, target, str(tmp_path),
+                                 fake_provider, "key")
+    assert v.verdict == "false_positive"
+    findings = db.get_findings(conn, sid)
+    assert findings[0].verdict == "false_positive"
+    assert findings[1].verdict is None  # untouched
+
+
 def test_provider_error_becomes_inconclusive(tmp_path):
     conn, sid = _seed(tmp_path)
 

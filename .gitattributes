@@ -1,0 +1,9 @@
+# Normalize line endings so scripts work on the platforms they target.
+* text=auto
+
+# Unix shell scripts MUST stay LF or their shebang breaks on Linux/macOS.
+*.sh text eol=lf
+
+# Windows scripts are happiest as CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf

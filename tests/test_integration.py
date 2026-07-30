@@ -30,7 +30,8 @@ def test_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(main.report_generator, "SCANS_DIR", tmp_path)
     db.init_db(dbp)
     conn = db.connect(dbp)
-    main.settings_mod.save_provider_config(conn, "anthropic", "sk-test", "")
+    main.settings_mod.save_provider_config(conn, "anthropic",
+                                           {"anthropic": "sk-test"})
     conn.close()
 
     client = TestClient(main.app)
@@ -50,6 +51,13 @@ def test_end_to_end(tmp_path, monkeypatch):
     assert vres["validated"] == 1
     detail = client.get(f"/api/scans/{sid}").json()
     assert detail["findings"][0]["verdict"] == "confirmed"
+
+    # per-finding validation returns the updated finding
+    fid = detail["findings"][0]["id"]
+    fres = client.post(f"/api/findings/{fid}/validate").json()
+    assert fres["id"] == fid
+    assert fres["verdict"] == "confirmed"
+    assert fres["recommendation"] == "Use subprocess with a list."
 
     rres = client.post(f"/api/scans/{sid}/report",
                        json={"meta": {"client": "Acme"},

@@ -37,7 +37,7 @@ def build_code_context(project_path: str, file: str, line: int | None,
         return ""
     target = Path(project_path) / file
     try:
-        lines = target.read_text(errors="replace").splitlines()
+        lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
         return ""
     start = max(1, line - radius)
