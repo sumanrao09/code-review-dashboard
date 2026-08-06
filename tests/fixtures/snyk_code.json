@@ -1,6 +1,9 @@
 {
   "runs": [
     {
+      "tool": {"driver": {"rules": [
+        {"id": "python/Sqli", "helpUri": "https://docs.snyk.io/scan-code/snyk-code/python-sqli"}
+      ]}},
       "results": [
         {
           "ruleId": "python/Sqli",

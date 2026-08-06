@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Secure Code Review Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css?v=2">
+  <link rel="stylesheet" href="/static/style.css?v=5">
 </head>
 <body>
   <!-- ───────────────────────── Top bar ───────────────────────── -->
@@ -160,6 +160,10 @@
             <span>Tool</span>
             <select id="f-tool"><option value="">All</option></select>
           </label>
+          <label class="select-wrap">
+            <span>Status</span>
+            <select id="f-triage"><option value="">All</option></select>
+          </label>
         </div>
       </div>
 
@@ -246,6 +250,6 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/app.js?v=5"></script>
 </body>
 </html>

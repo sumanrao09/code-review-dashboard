@@ -24,6 +24,16 @@ def test_parse_snyk_combined(tmp_path):
     assert dep.cwe == "CWE-400"
     assert "flask" in dep.title.lower() or "flask" in dep.description.lower()
 
+    # Code findings carry the rule's documentation link.
+    code_urls = [r["url"] for r in code.references]
+    assert "https://docs.snyk.io/scan-code/snyk-code/python-sqli" in code_urls
+
+    # Dependency findings carry advisory links + upgrade guidance.
+    dep_urls = [r["url"] for r in dep.references]
+    assert "https://github.com/advisories/GHSA-xxxx" in dep_urls
+    assert any("snyk.io/vuln/SNYK-PYTHON-FLASK-1" in u for u in dep_urls)
+    assert dep.recommendation and "2.2.5" in dep.recommendation
+
 
 def test_run_injects_stored_token(tmp_path, monkeypatch):
     captured = {}

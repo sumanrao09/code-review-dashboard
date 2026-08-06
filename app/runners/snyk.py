@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 from app import token_store
-from app.models import Finding, normalize_severity
+from app.models import Finding, make_ref, normalize_severity
 
 NAME = "snyk"
 BINARY = "snyk"
@@ -44,22 +44,62 @@ def run(project_path: str, workdir: Path) -> Path:
     return out
 
 
+def _rule_help(run_obj: dict) -> dict:
+    """Map ruleId -> its documentation URL from the SARIF driver rules."""
+    rules = (run_obj.get("tool", {}).get("driver", {}) or {}).get("rules", [])
+    help_by_id = {}
+    for rule in rules:
+        uri = rule.get("helpUri")
+        if rule.get("id") and uri:
+            help_by_id[rule["id"]] = uri
+    return help_by_id
+
+
 def _parse_code(sarif: dict) -> list:
     findings = []
     for run_obj in sarif.get("runs", []):
+        help_by_id = _rule_help(run_obj)
         for r in run_obj.get("results", []):
             loc = (r.get("locations") or [{}])[0].get("physicalLocation", {})
+            rule_id = r.get("ruleId", "")
+            refs = []
+            if help_by_id.get(rule_id):
+                refs.append(make_ref(help_by_id[rule_id], "Snyk rule details"))
             findings.append(Finding(
                 tool=NAME,
                 severity=_LEVEL_TO_SEVERITY.get(r.get("level", "warning"),
                                                 "medium"),
-                rule_id=r.get("ruleId", ""),
-                title=r.get("ruleId", "snyk code"),
+                rule_id=rule_id,
+                title=rule_id or "snyk code",
                 description=r.get("message", {}).get("text", ""),
                 file=loc.get("artifactLocation", {}).get("uri", ""),
                 line=loc.get("region", {}).get("startLine"),
+                references=refs,
             ))
     return findings
+
+
+def _dep_references(v: dict) -> list:
+    """Advisory links Snyk attaches to a dependency vulnerability."""
+    refs = []
+    for ref in v.get("references", []) or []:
+        url = ref.get("url") if isinstance(ref, dict) else ref
+        if url:
+            title = ref.get("title") if isinstance(ref, dict) else None
+            refs.append(make_ref(str(url), title))
+    if v.get("id"):
+        refs.append(make_ref(f"https://security.snyk.io/vuln/{v['id']}",
+                             "Snyk advisory"))
+    return refs
+
+
+def _dep_fix(v: dict) -> str | None:
+    """Human-readable upgrade guidance from Snyk's fixedIn versions."""
+    fixed = v.get("fixedIn") or []
+    if not fixed:
+        return None
+    pkg = v.get("packageName", "the package")
+    return f"Upgrade {pkg} to {', '.join(str(x) for x in fixed)} or later."
 
 
 def _parse_deps(deps: dict) -> list:
@@ -76,6 +116,8 @@ def _parse_deps(deps: dict) -> list:
             file=v.get("packageName", ""),
             line=None,
             cwe=cwes[0] if cwes else None,
+            recommendation=_dep_fix(v),
+            references=_dep_references(v),
         ))
     return findings
 

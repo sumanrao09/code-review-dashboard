@@ -10,9 +10,11 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app import db, folderpick, profiler, scanner, settings as settings_mod
+from app.models import TRIAGE_STATES
 from app.runners import sonar_auth
 from app.config import DB_PATH, ensure_dirs
 from app.report import generator as report_generator
+from app.validator import base as validate_base
 from app.validator import service as validate_service
 
 app = FastAPI(title="Secure Code Review Dashboard")
@@ -237,6 +239,41 @@ def validate_scan_endpoint(scan_id: int) -> dict:
         conn, scan_id, scan["project_path"], provider_fn, key)
     conn.close()
     return summary
+
+
+@app.get("/api/findings/{finding_id}/context")
+def finding_context_endpoint(finding_id: int) -> dict:
+    """Source lines around a finding, for inline display in the detail panel."""
+    conn = get_conn()
+    finding = db.get_finding(conn, finding_id)
+    if finding is None:
+        conn.close()
+        raise HTTPException(404, "finding not found")
+    scan = db.get_scan(conn, finding.scan_id)
+    conn.close()
+    if scan is None:
+        raise HTTPException(404, "scan not found")
+    return validate_base.code_context_window(
+        scan["project_path"], finding.file, finding.line)
+
+
+class TriageRequest(BaseModel):
+    status: str
+
+
+@app.post("/api/findings/{finding_id}/triage")
+def set_finding_triage(finding_id: int, req: TriageRequest) -> dict:
+    """Record a human triage decision (open / fixed / false_positive / accepted_risk)."""
+    if req.status not in TRIAGE_STATES:
+        raise HTTPException(400, f"invalid triage status '{req.status}'")
+    conn = get_conn()
+    finding = db.get_finding(conn, finding_id)
+    if finding is None:
+        conn.close()
+        raise HTTPException(404, "finding not found")
+    db.update_finding_triage(conn, finding_id, req.status)
+    conn.close()
+    return {"id": finding_id, "triage": req.status}
 
 
 @app.post("/api/findings/{finding_id}/validate")

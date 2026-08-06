@@ -5,7 +5,12 @@
       "title": "Denial of Service",
       "severity": "high",
       "packageName": "flask",
-      "identifiers": {"CWE": ["CWE-400"]}
+      "identifiers": {"CWE": ["CWE-400"]},
+      "fixedIn": ["2.2.5", "2.3.2"],
+      "references": [
+        {"title": "GitHub Advisory", "url": "https://github.com/advisories/GHSA-xxxx"},
+        {"url": "https://nvd.nist.gov/vuln/detail/CVE-2023-0001"}
+      ]
     }
   ]
 }

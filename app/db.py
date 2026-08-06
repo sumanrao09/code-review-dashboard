@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS findings (
     file TEXT, line INTEGER, cwe TEXT,
     verdict TEXT, confidence TEXT, verdict_note TEXT,
     impact_text TEXT, recommendation TEXT,
+    refs TEXT,
+    triage TEXT DEFAULT 'open',
     FOREIGN KEY (scan_id) REFERENCES scans(id)
 );
 CREATE TABLE IF NOT EXISTS metrics (
@@ -41,7 +43,7 @@ CREATE TABLE IF NOT EXISTS reports (
 
 _FINDING_COLS = ["tool", "severity", "rule_id", "title", "description", "file",
                  "line", "cwe", "verdict", "confidence", "verdict_note",
-                 "impact_text", "recommendation"]
+                 "impact_text", "recommendation", "triage"]
 
 
 def _now() -> str:
@@ -56,10 +58,20 @@ def connect(db_path: Path) -> sqlite3.Connection:
     return conn
 
 
+def _migrate(conn) -> None:
+    """Bring an older database up to the current schema in place."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(findings)")}
+    if "refs" not in cols:
+        conn.execute("ALTER TABLE findings ADD COLUMN refs TEXT")
+    if "triage" not in cols:
+        conn.execute("ALTER TABLE findings ADD COLUMN triage TEXT DEFAULT 'open'")
+
+
 def init_db(db_path: Path) -> None:
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = connect(db_path)
     conn.executescript(_SCHEMA)
+    _migrate(conn)
     conn.commit()
     conn.close()
 
@@ -92,10 +104,11 @@ def finish_scan(conn, scan_id: int) -> None:
 
 def insert_findings(conn, scan_id: int, findings: list) -> None:
     for f in findings:
+        refs = json.dumps(getattr(f, "references", None) or [])
         conn.execute(
-            f"INSERT INTO findings (scan_id, {','.join(_FINDING_COLS)}) "
-            f"VALUES (?, {','.join('?' * len(_FINDING_COLS))})",
-            (scan_id, *[getattr(f, c) for c in _FINDING_COLS]),
+            f"INSERT INTO findings (scan_id, {','.join(_FINDING_COLS)}, refs) "
+            f"VALUES (?, {','.join('?' * len(_FINDING_COLS))}, ?)",
+            (scan_id, *[getattr(f, c) for c in _FINDING_COLS], refs),
         )
     conn.commit()
 
@@ -120,13 +133,21 @@ def get_scan(conn, scan_id: int):
 
 
 def _row_to_finding(row) -> Finding:
+    refs = []
+    if "refs" in row.keys() and row["refs"]:
+        try:
+            refs = json.loads(row["refs"])
+        except (ValueError, TypeError):
+            refs = []
     return Finding(
         id=row["id"], scan_id=row["scan_id"], tool=row["tool"],
         severity=row["severity"], rule_id=row["rule_id"], title=row["title"],
         description=row["description"], file=row["file"], line=row["line"],
         cwe=row["cwe"], verdict=row["verdict"], confidence=row["confidence"],
         verdict_note=row["verdict_note"], impact_text=row["impact_text"],
-        recommendation=row["recommendation"],
+        recommendation=row["recommendation"], references=refs,
+        triage=(row["triage"] if "triage" in row.keys() and row["triage"]
+                else "open"),
     )
 
 
@@ -162,6 +183,12 @@ def update_finding_verdict(conn, finding_id: int, verdict: str,
         (verdict, confidence, verdict_note, impact_text, recommendation,
          cwe, finding_id),
     )
+    conn.commit()
+
+
+def update_finding_triage(conn, finding_id: int, status: str) -> None:
+    conn.execute("UPDATE findings SET triage=? WHERE id=?",
+                 (status, finding_id))
     conn.commit()
 
 

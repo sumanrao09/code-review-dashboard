@@ -15,6 +15,32 @@ def test_build_code_context_missing_file(tmp_path):
     assert base.build_code_context(str(tmp_path), "nope.py", 5) == ""
 
 
+def test_code_context_rejects_path_traversal(tmp_path):
+    # A finding path that escapes the project root must not read outside it.
+    secret = tmp_path / "secret.txt"
+    secret.write_text("TOP SECRET")
+    proj = tmp_path / "proj"
+    proj.mkdir()
+    (proj / "a.py").write_text("x = 1\n")
+    assert base.build_code_context(str(proj), "../secret.txt", 1) == ""
+    assert base._safe_source_path(str(proj), "../secret.txt") is None
+
+
+def test_code_context_window_structured(tmp_path):
+    src = tmp_path / "a.py"
+    src.write_text("\n".join(f"line{i}" for i in range(1, 41)))
+    win = base.code_context_window(str(tmp_path), "a.py", 20, radius=3)
+    assert win["target"] == 20
+    nums = [ln["num"] for ln in win["lines"]]
+    assert nums == [17, 18, 19, 20, 21, 22, 23]
+    assert win["lines"][3]["text"] == "line20"
+
+
+def test_code_context_window_no_line(tmp_path):
+    win = base.code_context_window(str(tmp_path), "a.py", None)
+    assert win["lines"] == [] and win["target"] is None
+
+
 def test_build_prompt_mentions_finding(tmp_path):
     f = Finding(tool="semgrep", severity="high", rule_id="r1",
                 title="SQLi", description="bad", file="a.py", line=3)

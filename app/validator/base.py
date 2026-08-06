@@ -31,18 +31,57 @@ VERDICT_SCHEMA = {
 }
 
 
+def _safe_source_path(project_path: str, file: str) -> Path | None:
+    """Resolve file within project_path, refusing paths that escape the root."""
+    if not file:
+        return None
+    root = Path(project_path).resolve()
+    try:
+        target = (root / file).resolve()
+    except (OSError, ValueError, RuntimeError):
+        return None
+    if target != root and root not in target.parents:
+        return None  # path traversal — outside the scanned project
+    return target
+
+
+def _read_source_lines(project_path: str, file: str) -> list[str]:
+    target = _safe_source_path(project_path, file)
+    if target is None:
+        return []
+    try:
+        return target.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+
 def build_code_context(project_path: str, file: str, line: int | None,
                        radius: int = 15) -> str:
     if not line:
         return ""
-    target = Path(project_path) / file
-    try:
-        lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
-    except OSError:
+    lines = _read_source_lines(project_path, file)
+    if not lines:
         return ""
     start = max(1, line - radius)
     end = min(len(lines), line + radius)
     return "\n".join(f"{n}: {lines[n - 1]}" for n in range(start, end + 1))
+
+
+def code_context_window(project_path: str, file: str, line: int | None,
+                        radius: int = 8) -> dict:
+    """Structured source window for UI display: numbered lines + target line."""
+    if not line:
+        return {"lines": [], "target": None, "file": file}
+    lines = _read_source_lines(project_path, file)
+    if not lines:
+        return {"lines": [], "target": None, "file": file}
+    start = max(1, line - radius)
+    end = min(len(lines), line + radius)
+    return {
+        "file": file,
+        "target": line,
+        "lines": [{"num": n, "text": lines[n - 1]} for n in range(start, end + 1)],
+    }
 
 
 def build_prompt(finding: Finding, code_context: str) -> str:

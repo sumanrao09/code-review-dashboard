@@ -7,7 +7,14 @@
       "extra": {
         "message": "Detected use of exec().",
         "severity": "ERROR",
-        "metadata": {"cwe": ["CWE-95: Improper Neutralization of Directives"]}
+        "metadata": {
+          "cwe": ["CWE-95: Improper Neutralization of Directives"],
+          "references": [
+            "https://owasp.org/www-community/attacks/Code_Injection",
+            "https://docs.python.org/3/library/functions.html#exec"
+          ],
+          "source": "https://semgrep.dev/r/python.lang.security.audit.exec-detected"
+        }
       }
     },
     {

@@ -38,6 +38,60 @@ def test_insert_and_get_findings(tmp_path):
     assert got[0].id is not None
 
 
+def test_references_roundtrip(tmp_path):
+    conn = _conn(tmp_path)
+    sid = db.create_scan(conn, "/proj", ["semgrep"])
+    refs = [{"title": "OWASP", "url": "https://owasp.org/x"},
+            {"title": None, "url": "https://cwe.mitre.org/y"}]
+    db.insert_findings(conn, sid, [
+        Finding(tool="semgrep", severity="high", rule_id="r", title="t",
+                description="d", file="a.py", references=refs),
+    ])
+    got = db.get_findings(conn, sid)[0]
+    assert got.references == refs
+
+
+def test_triage_default_and_update(tmp_path):
+    conn = _conn(tmp_path)
+    sid = db.create_scan(conn, "/proj", ["semgrep"])
+    db.insert_findings(conn, sid, [
+        Finding(tool="semgrep", severity="high", rule_id="r", title="t",
+                description="d", file="a.py", line=3),
+    ])
+    fid = db.get_findings(conn, sid)[0].id
+    assert db.get_findings(conn, sid)[0].triage == "open"  # default
+    db.update_finding_triage(conn, fid, "fixed")
+    assert db.get_findings(conn, sid)[0].triage == "fixed"
+
+
+def test_migrate_adds_refs_column(tmp_path):
+    # A database created before the refs column must gain it on init_db.
+    p = tmp_path / "old.db"
+    conn = db.connect(p)
+    conn.executescript(
+        "CREATE TABLE findings (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "scan_id INTEGER, tool TEXT, severity TEXT, rule_id TEXT, title TEXT, "
+        "description TEXT, file TEXT, line INTEGER, cwe TEXT, verdict TEXT, "
+        "confidence TEXT, verdict_note TEXT, impact_text TEXT, recommendation TEXT)"
+    )
+    conn.commit()
+    conn.close()
+
+    db.init_db(p)  # should migrate in place, not error
+    conn = db.connect(p)
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(findings)")}
+    assert "refs" in cols
+    assert "triage" in cols
+
+    # A finding read back from a migrated DB still gets a sane triage default.
+    sid = db.create_scan(conn, "/proj", ["semgrep"])
+    db.insert_findings(conn, sid, [
+        Finding(tool="semgrep", severity="high", rule_id="r", title="t",
+                description="d", file="a.py", line=1),
+    ])
+    assert db.get_findings(conn, sid)[0].triage == "open"
+
+
 def test_update_verdict(tmp_path):
     conn = _conn(tmp_path)
     sid = db.create_scan(conn, "/proj", ["semgrep"])

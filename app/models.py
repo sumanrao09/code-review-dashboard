@@ -3,6 +3,8 @@ from typing import Optional
 
 SEVERITIES = ["critical", "high", "medium", "low", "info"]
 VERDICTS = ["confirmed", "partially_true", "false_positive", "inconclusive"]
+# Human triage decision, independent of the AI verdict.
+TRIAGE_STATES = ["open", "fixed", "false_positive", "accepted_risk"]
 
 _SEVERITY_MAP = {
     "sonarqube": {"BLOCKER": "critical", "CRITICAL": "high", "MAJOR": "medium",
@@ -33,8 +35,17 @@ class Finding:
     verdict_note: Optional[str] = None
     impact_text: Optional[str] = None
     recommendation: Optional[str] = None
+    # Reference links the scanner attached to the rule, as {"title", "url"}.
+    references: list = field(default_factory=list)
+    # Human triage decision (see TRIAGE_STATES), independent of the AI verdict.
+    triage: str = "open"
     id: Optional[int] = None
     scan_id: Optional[int] = None
+
+
+def make_ref(url: str, title: Optional[str] = None) -> dict:
+    """Normalize a scanner reference into a {"title", "url"} record."""
+    return {"title": title, "url": url}
 
 
 @dataclass
