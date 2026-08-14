@@ -4,6 +4,7 @@ from app import db
 from app.validator import base
 from app.validator.base import Verdict
 from app.validator.providers import anthropic as anthropic_provider
+from app.validator.providers import claude_cli as claude_cli_provider
 from app.validator.providers import deepseek as deepseek_provider
 from app.validator.providers import gemini as gemini_provider
 from app.validator.providers import grok as grok_provider
@@ -17,6 +18,7 @@ PROVIDERS = {
     "deepseek": deepseek_provider.validate,
     "grok": grok_provider.validate,
     "ollama": ollama_provider.validate,
+    "claude_cli": claude_cli_provider.validate,
 }
 
 

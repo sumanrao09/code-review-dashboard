@@ -188,10 +188,27 @@ Open **Settings** (top-right gear). Under **AI validation**, pick an **Active pr
 | **DeepSeek** | `deepseek-chat` | [platform.deepseek.com](https://platform.deepseek.com) | Yes |
 | **xAI** (Grok) | `grok-3` | [console.x.ai](https://console.x.ai) | Yes |
 | **Ollama** (local) | `llama3.1` (configurable) | Runs on your machine — [ollama.com](https://ollama.com) | **No key** |
+| **Claude CLI** (subscription) | your `claude` login | [Claude Code](https://claude.com/claude-code) on your machine | **No key** |
 
-**Two rules to remember:**
+**Three rules to remember:**
 1. The **Active provider** must match a key you've stored. If you set the provider to OpenAI but only have an Anthropic key saved, validation returns *"No API key stored for 'openai'"*. Switch the active provider to match your key.
 2. **Ollama needs no key** but does need Ollama running locally with a model pulled (`ollama pull llama3.1`). It's free and fully private — nothing leaves your machine.
+3. **Claude CLI needs no key.** It runs your locally-installed `claude` command in headless mode, so validation goes through whatever that CLI is signed into — including a **Claude Pro/Max subscription** rather than a pay-per-token API key. See below.
+
+### Using your Claude subscription (Claude CLI)
+
+A **Claude Pro subscription cannot be linked directly** — Pro has no API key. But the **Claude CLI (Claude Code)** *can* run on your subscription, and this provider drives it for you:
+
+1. Install **Claude Code** and sign in with your subscription (run `claude` once and log in). Make sure the `claude` command is on your `PATH` — or set the `CLAUDE_CLI` environment variable to its full path.
+2. In **Settings → Active provider**, choose **Claude CLI (subscription)**. No key field — it uses your CLI login.
+3. Click **Validate** on any finding.
+
+Under the hood it calls `claude -p --output-format json` per finding. Things to know:
+
+- **Usage counts against your subscription's limits**, not per-token billing. Validating many findings in one batch can hit Pro's caps quickly — Max has far more headroom.
+- It's **slower** than a direct API call (each validation spins up a CLI session), so "Validate all" across a large scan will be gradual.
+- Requires the standalone CLI installed and logged in; the VS Code extension alone doesn't put `claude` on your `PATH`.
+- Override the binary with `CLAUDE_CLI=/full/path/to/claude` if it isn't discoverable.
 
 Keys are stored **only** in the local SQLite database and are shown as `set`/`unset` in the UI — never displayed in cleartext.
 

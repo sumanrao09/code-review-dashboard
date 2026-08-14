@@ -95,4 +95,4 @@ def test_compat_providers_use_expected_endpoints():
 def test_service_registry_has_all_providers():
     from app.validator import service
     assert set(service.PROVIDERS) == {"anthropic", "openai", "gemini",
-                                      "deepseek", "grok", "ollama"}
+                                      "deepseek", "grok", "ollama", "claude_cli"}

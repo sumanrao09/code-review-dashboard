@@ -189,7 +189,8 @@
       </div>
       <div class="modal-body">
         <p class="modal-hint">Keys and tokens are stored only in the local database and never returned in cleartext.
-          Ollama runs locally and needs no key.</p>
+          Ollama and the Claude CLI need no key — Ollama runs locally; the Claude CLI uses your existing
+          <code>claude</code> login (e.g. a Pro/Max subscription).</p>
         <div class="settings-section">AI validation</div>
         <div class="field">
           <label class="field-label" for="s-provider">Active provider</label>
@@ -200,6 +201,7 @@
             <option value="deepseek">DeepSeek</option>
             <option value="grok">xAI (Grok)</option>
             <option value="ollama">Ollama (local)</option>
+            <option value="claude_cli">Claude CLI (subscription)</option>
           </select>
         </div>
         <div class="field">

@@ -2,8 +2,9 @@ from app import db
 
 # Providers that authenticate with an API key stored in Settings.
 KEYED_PROVIDERS = ["anthropic", "openai", "gemini", "deepseek", "grok"]
-# Providers that need no key (Ollama runs locally).
-KEYLESS_PROVIDERS = ["ollama"]
+# Providers that need no key: Ollama runs locally; the Claude CLI uses the
+# machine's existing `claude` login (e.g. a Pro/Max subscription).
+KEYLESS_PROVIDERS = ["ollama", "claude_cli"]
 PROVIDERS = KEYED_PROVIDERS + KEYLESS_PROVIDERS
 
 
